@@ -8,4 +8,6 @@ class TextNode:
         return self.text == other.text and self.text_type == other.text_type and self.url == other.url
 
     def __repr__(self):
+        if self.url is None:
+            return "TextNode(" + self.text + ", " + self.text_type + ")"
         return "TextNode(" + self.text + ", " + self.text_type + ", " + self.url + ")"
