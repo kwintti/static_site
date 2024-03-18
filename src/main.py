@@ -1,32 +1,10 @@
 from textnode import TextNode
 from htmlnode import HTMLNode, LeafNode, ParentNode
+import re
+
 
 def main():
-    site = TextNode("Kiva kuva", "image", "imgur.fi/logo.png")
-    site.text
-    site.text_type
-    site.url = "www.google.com"
-    html = HTMLNode(props={"href": "www.google.com", "target": "_blank"})
-    #test = LeafNode("p", "This is a paragraph of text.")
-    #test = LeafNode("a", "Click me!", {"href": "https://www.google.com"})
-    #test = LeafNode(None, "Click me now")
-    #node = ParentNode(
-    #        "p",
-    #        [
-    #            LeafNode("b", "Bold text"),
-    #            LeafNode(None, "Normal text"),
-    #            LeafNode("i", "italic text"),
-    #            LeafNode(None, "Normal text"),
-    #            ParentNode("div", [LeafNode(None, "1 Normal text"), LeafNode("b", "1 This is bold text")]),
-    #            ],
-    #)
-
-    #print(node.to_html())
-    #print(text_node_to_html_node(site))
-    #node = TextNode("This is text with a `code block` word and it continues `hello world`", "text")
-    #node2 = TextNode("2 This is text with a `code block` word and it continues `hello world`", "text")
-    #new_nodes = split_nodes_delimiter([node, node2, "This is raw text, no node"], "`", "code")
-
+    pass
 
 
 def text_node_to_html_node(text_node):
@@ -64,5 +42,84 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
             output.append(TextNode(split, text_type))
         new_nodes.extend(output)
     return new_nodes
+
+
+def extract_markdown_images(text):
+    matches = re.findall(r"!\[(.*?)\]\((.*?)\)", text)
+    return matches
+
+
+def extract_markdown_links(text):
+    matches = re.findall(r"\[(.*?)\]\((.*?)\)", text)
+    return matches
+
+
+def split_nodes_image(old_nodes):
+    right_side = []
+    new_nodes = []
+    for val in old_nodes:
+        links = extract_markdown_images(val.text)
+        output = []
+        if len(links) == 0:
+            output.append(TextNode(val.text, val.text_type))
+            new_nodes.extend(output)
+            continue
+        num_iterations = len(links)
+        for link in links:
+            num_iterations -= 1
+            image_tup = link
+            if right_side:
+                splitted = right_side.split(f"![{image_tup[0]}]({image_tup[1]})", 1)
+                splitted = [i for i in splitted if i != ""]
+                output.append(TextNode(splitted[0], val.text_type))
+                output.append(TextNode(image_tup[0], "image", image_tup[1]))
+                if len(splitted) > 1 and num_iterations == 0:
+                    output.append(TextNode(splitted[1], val.text_type))
+                right_side = splitted[-1]
+                continue
+            splitted = val.text.split(f"![{image_tup[0]}]({image_tup[1]})", 1)
+            splitted = [i for i in splitted if i != ""]
+            output.append(TextNode(splitted[0], val.text_type))
+            output.append(TextNode(image_tup[0], "image", image_tup[1]))
+            right_side = splitted[-1]
+
+        new_nodes.extend(output)
+        right_side = []
+    return new_nodes
+
+
+def split_nodes_links(old_nodes):
+    right_side = []
+    new_nodes = []
+    for val in old_nodes:
+        links = extract_markdown_links(val.text)
+        output = []
+        if len(links) == 0:
+            output.append(TextNode(val.text, val.text_type))
+            new_nodes.extend(output)
+            continue
+        num_iterations = len(links)
+        for link in links:
+            num_iterations -= 1
+            image_tup = link
+            if right_side:
+                splitted = right_side.split(f"[{image_tup[0]}]({image_tup[1]})", 1)
+                splitted = [i for i in splitted if i != ""]
+                output.append(TextNode(splitted[0], val.text_type))
+                output.append(TextNode(image_tup[0], "link", image_tup[1]))
+                if len(splitted) > 1 and num_iterations == 0:
+                    output.append(TextNode(splitted[1], val.text_type))
+                right_side = splitted[-1]
+                continue
+            splitted = val.text.split(f"[{image_tup[0]}]({image_tup[1]})", 1)
+            splitted = [i for i in splitted if i != ""]
+            output.append(TextNode(splitted[0], val.text_type))
+            output.append(TextNode(image_tup[0], "link", image_tup[1]))
+            right_side = splitted[-1]
+
+        new_nodes.extend(output)
+        right_side = []
+    return new_nodes
+
 
 main()
