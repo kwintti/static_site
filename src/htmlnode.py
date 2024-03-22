@@ -16,7 +16,7 @@ class HTMLNode:
             return output
 
     def __repr__(self):
-        print(self.tag, self.value, self.children, self.props)
+        return f"{self.tag} {self.value} {self.children} {self.props}"
 
 
 class LeafNode(HTMLNode):
@@ -47,7 +47,7 @@ class ParentNode(HTMLNode):
         if self.tag is None:
             raise ValueError("Not tag provided")
         if self.children is None:
-            raise ValueError("Children is not provided") 
+            raise ValueError("Children is not provided")
         tag_open = "<" + self.tag
         tag_close = "</" + self.tag + ">"
         props = ""
