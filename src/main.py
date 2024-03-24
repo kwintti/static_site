@@ -1,10 +1,14 @@
 from textnode import TextNode
 from htmlnode import HTMLNode, LeafNode, ParentNode
 import re
+import os
+import shutil
 
 
 def main():
-    pass
+    copy_files_from_directory("static/", "public/")
+    generate_page("content/index.md", "template.html", "public/index.html")
+
 
 def text_node_to_html_node(text_node):
     if text_node.text_type == "text":
@@ -81,9 +85,10 @@ def split_nodes_image(old_nodes):
                 continue
             splitted = val.text.split(f"![{image_tup[0]}]({image_tup[1]})", 1)
             splitted = [i for i in splitted if i != ""]
-            output.append(TextNode(splitted[0], val.text_type))
+            if len(splitted) != 0:
+                output.append(TextNode(splitted[0], val.text_type))
+                right_side = splitted[-1]
             output.append(TextNode(image_tup[0], "image", image_tup[1]))
-            right_side = splitted[-1]
             if len(splitted) == 2 and len(links) == 1:
                 output.append(TextNode(right_side, val.text_type))
         new_nodes.extend(output)
@@ -111,7 +116,8 @@ def split_nodes_links(old_nodes):
             if right_side:
                 splitted = right_side.split(f"[{image_tup[0]}]({image_tup[1]})", 1)
                 splitted = [i for i in splitted if i != ""]
-                output.append(TextNode(splitted[0], val.text_type))
+                if len(splitted) != 0:
+                    output.append(TextNode(splitted[0], val.text_type))
                 output.append(TextNode(image_tup[0], "link", image_tup[1]))
                 if len(splitted) > 1 and num_iterations == 0:
                     output.append(TextNode(splitted[1], val.text_type))
@@ -119,9 +125,10 @@ def split_nodes_links(old_nodes):
                 continue
             splitted = val.text.split(f"[{image_tup[0]}]({image_tup[1]})", 1)
             splitted = [i for i in splitted if i != ""]
-            output.append(TextNode(splitted[0], val.text_type))
+            if len(splitted) != 0:
+                output.append(TextNode(splitted[0], val.text_type))
+                right_side = splitted[-1]
             output.append(TextNode(image_tup[0], "link", image_tup[1]))
-            right_side = splitted[-1]
             if len(splitted) == 2 and len(links) == 1:
                 output.append(TextNode(right_side, val.text_type))
         new_nodes.extend(output)
@@ -281,6 +288,60 @@ def markdown_to_html_node(markdown):
     finalHtml = ParentNode("div", build_blocks_up)
     return finalHtml
 
+
+def copy_files_from_directory(from_path, to_path):
+    from_path = from_path
+    to_path = to_path
+    if os.path.exists(from_path) is False:
+        raise Exception("Path doesn't exist")
+    if os.path.exists(to_path) is False:
+        os.mkdir(to_path)
+    list_files = os.listdir(from_path)
+    for file in list_files:
+        is_file = os.path.isfile(os.path.join(from_path, file))
+        is_dir = os.path.isdir(os.path.join(from_path, file))
+        if is_file:
+            shutil.copy(os.path.join(from_path, file), os.path.join(to_path, file))
+        if is_dir:
+            copy_files_from_directory(os.path.join(from_path, file), os.path.join(to_path, file))
+
+
+def extract_title(header_md):
+    blocks = markdown_to_blocks(header_md)
+    for block in blocks:
+        type_blc = block_to_block_type(block)
+        if type_blc == "heading":
+            count = 0
+            for letter in block[:6]:
+                if letter == "#":
+                    count += 1
+            if count == 1:
+                return block[1:].strip()
+    raise Exception("h1 not found")
+
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+    with open(from_path) as f:
+        md_file = f.read()
+    with open(template_path) as f:
+        template_file = f.read()
+
+    title = extract_title(md_file)
+    content = markdown_to_html_node(md_file).to_html()
+    output_html = template_file.replace("{{ Title }}", title)
+    output_html = output_html.replace("{{ Content }}", content)
+
+    dir_path = ""
+    dir_path_list = dest_path.split("/")
+    for folder in dir_path_list[:-1]:
+        dir_path = os.path.join(dir_path, folder)
+
+    if os.path.isdir(dir_path) is False:
+        os.makedirs(dir_path)
+
+    with open(dest_path, "w") as f:
+        f.write(output_html)
 
 
 main()
