@@ -7,8 +7,8 @@ import shutil
 
 def main():
     copy_files_from_directory("static/", "public/")
-    generate_page("content/index.md", "template.html", "public/index.html")
-
+    #generate_page("content/index.md", "template.html", "public/index.html")
+    generate_pages_recursive("content/", "template.html", "public/")
 
 def text_node_to_html_node(text_node):
     if text_node.text_type == "text":
@@ -210,9 +210,21 @@ def u_list_to_htmlnode(u_list):
     list_items = []
     for line in u_list.splitlines():
         if line[0] == "*":
-            list_items.append(LeafNode("li", line.split("*", 1)[-1].strip()))
+            value = line.split("*", 1)[-1].strip()
+            txt_nodes = text_to_textnodes(value)
+            all_nodes = []
+            for node in txt_nodes:
+                to_html_node = text_node_to_html_node(node)
+                all_nodes.append(to_html_node)
+            list_items.append(ParentNode("li", all_nodes))
         if line[0] == "-":
-            list_items.append(LeafNode("li", line.split("-", 1)[-1].strip()))
+            value = line.split("-", 1)[-1].strip()
+            txt_nodes = text_to_textnodes(value)
+            all_nodes = []
+            for node in txt_nodes:
+                to_html_node = text_node_to_html_node(node)
+                all_nodes.append(to_html_node)
+            list_items.append(ParentNode("li", all_nodes))
     node = ParentNode("ul", list_items)
     return node
 
@@ -220,7 +232,13 @@ def u_list_to_htmlnode(u_list):
 def ord_list_to_htmlnode(ord_list):
     list_items = []
     for line in ord_list.splitlines():
-        list_items.append(LeafNode("li", line.split(".", 1)[-1].strip()))
+        value = line.split(".", 1)[-1].strip()
+        txt_nodes = text_to_textnodes(value)
+        all_nodes = []
+        for node in txt_nodes:
+            to_html_node = text_node_to_html_node(node)
+            all_nodes.append(to_html_node)
+        list_items.append(ParentNode("li", all_nodes))
     node = ParentNode("ol", list_items)
     return node
 
@@ -252,7 +270,12 @@ def heading_to_htmlnode(heading):
             count += 1
     value = heading[count:].strip()
     level = f"h{count}"
-    node = LeafNode(level, value)
+    txt_nodes = text_to_textnodes(value)
+    all_nodes = []
+    for node in txt_nodes:
+        to_html_node = text_node_to_html_node(node)
+        all_nodes.append(to_html_node)
+    node = ParentNode(level, all_nodes)
 
     return node
 
@@ -290,8 +313,6 @@ def markdown_to_html_node(markdown):
 
 
 def copy_files_from_directory(from_path, to_path):
-    from_path = from_path
-    to_path = to_path
     if os.path.exists(from_path) is False:
         raise Exception("Path doesn't exist")
     if os.path.exists(to_path) is False:
@@ -342,6 +363,22 @@ def generate_page(from_path, template_path, dest_path):
 
     with open(dest_path, "w") as f:
         f.write(output_html)
+
+
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    if os.path.exists(dir_path_content) is False:
+        raise Exception("Path doesn't exist")
+    if os.path.exists(dest_dir_path) is False:
+        os.mkdir(dest_dir_path)
+    list_files = os.listdir(dir_path_content)
+    for file in list_files:
+        is_file = os.path.isfile(os.path.join(dir_path_content, file))
+        is_dir = os.path.isdir(os.path.join(dir_path_content, file))
+        if is_file:
+            file_html_name = file.replace(".md", ".html")
+            generate_page(os.path.join(dir_path_content, file), template_path, os.path.join(dest_dir_path, file_html_name))
+        if is_dir:
+            generate_pages_recursive(os.path.join(dir_path_content, file), template_path, os.path.join(dest_dir_path, file))
 
 
 main()
